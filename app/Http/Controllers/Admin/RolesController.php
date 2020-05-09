@@ -2,23 +2,24 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\Role\BulkDestroyRole;
-use App\Http\Requests\Admin\Role\DestroyRole;
-use App\Http\Requests\Admin\Role\IndexRole;
-use App\Http\Requests\Admin\Role\StoreRole;
-use App\Http\Requests\Admin\Role\UpdateRole;
-use App\Models\Role;
-use Brackets\AdminListing\Facades\AdminListing;
 use Exception;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Contracts\Routing\ResponseFactory;
-use Illuminate\Contracts\View\Factory;
-use Illuminate\Http\RedirectResponse;
+use App\Models\Role;
+use Illuminate\View\View;
+use App\Models\Permission;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\DB;
-use Illuminate\View\View;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Contracts\View\Factory;
+use App\Http\Requests\Admin\Role\IndexRole;
+use App\Http\Requests\Admin\Role\StoreRole;
+use App\Http\Requests\Admin\Role\UpdateRole;
+use App\Http\Requests\Admin\Role\DestroyRole;
+use Brackets\AdminListing\Facades\AdminListing;
+use App\Http\Requests\Admin\Role\BulkDestroyRole;
+use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class RolesController extends Controller
 {
@@ -65,7 +66,9 @@ class RolesController extends Controller
     {
         $this->authorize('admin.role.create');
 
-        return view('admin.role.create');
+        $permissions = Permission::all();
+
+        return view('admin.role.create', compact('permissions'));
     }
 
     /**
@@ -81,6 +84,11 @@ class RolesController extends Controller
 
         // Store the Role
         $role = Role::create($sanitized);
+
+        // But we do have a permissions, so we need to attach the permissions to the Role
+        if ($request->input('permissions')) {
+            $role->permissions()->sync(collect($request->input('permissions', []))->map->id->toArray());
+        }
 
         if ($request->ajax()) {
             return ['redirect' => url('admin/roles'), 'message' => trans('brackets/admin-ui::admin.operation.succeeded')];
@@ -114,9 +122,12 @@ class RolesController extends Controller
     {
         $this->authorize('admin.role.edit', $role);
 
+        $role->load("permissions");
+        $permissions = Permission::all();
 
         return view('admin.role.edit', [
             'role' => $role,
+            'permissions' => $permissions
         ]);
     }
 
@@ -134,6 +145,11 @@ class RolesController extends Controller
 
         // Update changed values Role
         $role->update($sanitized);
+
+        // But we do have a permissions, so we need to attach the permissions to the Role
+        if ($request->input('permissions')) {
+            $role->permissions()->sync(collect($request->input('permissions', []))->map->id->toArray());
+        }
 
         if ($request->ajax()) {
             return [
@@ -171,7 +187,7 @@ class RolesController extends Controller
      * @throws Exception
      * @return Response|bool
      */
-    public function bulkDestroy(BulkDestroyRole $request) : Response
+    public function bulkDestroy(BulkDestroyRole $request): Response
     {
         DB::transaction(static function () use ($request) {
             collect($request->data['ids'])

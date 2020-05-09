@@ -46,5 +46,22 @@ return [
         ],
     ],
 
+    'permission' => [
+        'title' => 'Permissions',
+
+        'actions' => [
+            'index' => 'Permissions',
+            'create' => 'New Permission',
+            'edit' => 'Edit :name',
+        ],
+
+        'columns' => [
+            'id' => 'ID',
+            'name' => 'Name',
+            'guard_name' => 'Guard name',
+            
+        ],
+    ],
+
     // Do not delete me :) I'm used for auto-generation
 ];
